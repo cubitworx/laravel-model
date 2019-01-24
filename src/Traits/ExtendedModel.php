@@ -6,8 +6,31 @@ use Carbon\Carbon;
 
 trait ExtendedModel {
 
+	public static function applyMutations(array $events, array $doc) {
+
+		$model = new static();
+		if (!empty($model->casts)) {
+			foreach ($model->casts as $field => $cast) {
+				if (($cast === 'array') && array_key_exists($field, $doc))
+					$doc[$field] = json_encode($doc[$field]);
+			}
+		}
+
+		$obj = (object)$doc;
+		$name = static::class;
+		foreach ($events as $event) {
+			foreach (static::getEventDispatcher()->getListeners("eloquent.{$event}: {$name}") as $listener)
+				$listener($event, [$obj]);
+		}
+
+		return (array)$obj;
+	}
+
 	public static function defaults(array $doc) {
-		return [];
+		return [
+			'created_at' => Carbon::now(),
+			'updated_at' => Carbon::now(),
+		];
 	}
 
 	/**
@@ -15,32 +38,22 @@ trait ExtendedModel {
 	 *
 	 * Chunk insert for SQLlite which is currently limited to bulk insert limit of 1000 records
 	 */
-	public static function insertWithDefaults(array $data, array $defaults = []) {
-		$defaults += [
-			'created_at' => Carbon::now(),
-			'updated_at' => Carbon::now(),
-		];
-
-		$model = new static();
-
-		foreach ($data as &$doc) {
-			if (!empty($model->casts)) {
-				foreach ($model->casts as $field => $cast) {
-					if ($cast === 'array')
-						$doc[$field] = json_encode($doc[$field]);
-				}
-			}
-			$doc += $defaults + static::defaults($doc);
+	public static function insertBatch(array $data) {
+		foreach ($data as $key => $doc) {
+			$doc += static::defaults($doc);
+			$data[$key] = static::applyMutations(['saving', 'updating'], $doc);
 		}
 
 		$chunks = array_chunk($data, floor(999 / count($data)));
-		foreach ($chunks as $chunk)
-			static::insert($chunk);
 
-		return $data;
+		$result = [];
+		foreach ($chunks as $chunk)
+			$result[$key] = static::insert($chunk);
+		return $result;
 	}
 
 	public static function upsert(array $doc, array $where = null) {
+		$doc = static::applyMutations(['saving', 'updating'], $doc);
 		return parent::updateOrCreate($where ? $where : ['id' => $doc['id']], $doc);
 	}
 
