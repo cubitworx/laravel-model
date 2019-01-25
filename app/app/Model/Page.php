@@ -22,17 +22,16 @@ class Page extends Model {
 		parent::boot();
 
 		static::saving(function($model)  {
-			$model->saving = $model->saving ?? $model->title ?? '';
+			$model->saving = $model->saving ?? ($model->title ?? '');
 		});
 
 		static::updating(function($model)  {
-			$model->updating = $model->updating ?? $model->title ?? '';
+			$model->updating = $model->updating ?? ($model->title ?? '');
 		});
 	}
 
 	public static function upsert(array $doc, array $where = null) {
-		$doc = static::applyMutations(['saving', 'updating'], $doc);
-		return parent::updateOrCreate($where ? $where : ['url' => $doc['url']], $doc);
+		return parent::_upsert($doc, $where ?? ['url' => $doc['url']]);
 	}
 
 }

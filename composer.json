@@ -1,6 +1,6 @@
 {
 	"name": "cubitworx/laravel-model",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.2",
 	"description": "Extend Laravel Model with useful methods",
 	"keywords": ["laravel", "eloquent", "database", "model"],
 	"license": "MIT",
