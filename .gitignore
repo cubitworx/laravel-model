@@ -1,0 +1,6 @@
+/app/node_modules
+/app/public/hot
+/app/public/storage
+/app/storage/*.key
+/app/vendor
+/app/npm-debug.log
